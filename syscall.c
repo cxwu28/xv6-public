@@ -139,7 +139,7 @@ syscall(void)
 
   num = curproc->tf->eax;
 
-  if (num == SYS_getclosecount) {
+  if(num == SYS_close) {
     close_count++;
   }
 

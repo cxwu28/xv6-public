@@ -93,7 +93,8 @@ sys_uptime(void)
 // hw1 variant C
 // Returns: The value of a counter tracking how many times close() has been called by user processes since the OS started.
 int
-sys_getclosecount() {
+sys_getclosecount() 
+{
   // return myproc()->pid;
   extern int close_count;
   return close_count;
