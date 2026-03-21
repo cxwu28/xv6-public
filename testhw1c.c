@@ -61,8 +61,9 @@ test_stress()
 int
 main(int argc, char *argv[])
 {
+  printf(1, ">>> Initial count: %d\n", getclosecount());
   test_basic();
   test_stress();
-  printf(1, "--- Global check: the close calls count is: %d ---\n", getclosecount());
+  printf(1, ">>> Global check: the close calls count is: %d\n", getclosecount());
   exit();
 }
