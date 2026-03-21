@@ -63,6 +63,6 @@ main(int argc, char *argv[])
 {
   test_basic();
   test_stress();
-  printf(1, "--- Global check: the close calls count is: %d ---\n");
+  printf(1, "--- Global check: the close calls count is: %d ---\n", getclosecount());
   exit();
 }
