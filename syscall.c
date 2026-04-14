@@ -131,6 +131,8 @@ static int (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_getclosecount] sys_getclosecount,
+[SYS_mprotect] sys_mprotect,
+[SYS_munprotect] sys_munprotect
 };
 
 void
