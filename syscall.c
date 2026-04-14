@@ -104,6 +104,8 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_getclosecount(void);
+extern int sys_mprotect(void);
+extern int sys_munprotect(void);
 int close_count = 0;
 
 static int (*syscalls[])(void) = {

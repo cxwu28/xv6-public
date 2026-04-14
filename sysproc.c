@@ -99,3 +99,42 @@ sys_getclosecount()
   extern int close_count;
   return close_count;
 }
+
+// hw2
+int
+sys_mprotect(void)
+{
+  char *addr;
+  int len;
+
+  if(argptr(0, &addr, 0) < 0 || argint(1, &len) < 0)
+    return -1;
+  if((uint)addr % PGSIZE != 0)
+    return -1;
+  if(len <= 0)
+    return -1;
+
+  struct proc *curproc = myproc();
+  if((uint)addr + len > curproc->sz || (uint)addr < PGSIZE) 
+    return -1;
+
+  return mprotect_vm(addr, len, 0); 
+}
+
+int
+sys_munprotect(void)
+{
+  char *addr;
+  int len;
+
+  if(argptr(0, &addr, 0) < 0 || argint(1, &len) < 0)
+    return -1;
+  if((uint)addr % PGSIZE != 0 || len <= 0)
+    return -1;
+
+  struct proc *curproc = myproc();
+  if((uint)addr + len > curproc->sz || (uint)addr < PGSIZE)
+    return -1;
+
+  return mprotect_vm(addr, len, 1);
+}

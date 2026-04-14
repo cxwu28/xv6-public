@@ -385,6 +385,31 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+// hw2
+int
+mprotect_vm(void *addr, int len, int enable_write)
+{
+  pte_t *pte;
+  uint a, last;
+  
+  a = (uint)addr;
+  last = a + len;
+  
+  for(; a < last; a += PGSIZE){
+    if((pte = walkpgdir(myproc()->pgdir, (void*)a, 0)) == 0)
+      return -1;
+
+    if(enable_write)
+      *pte |= PTE_W;    // set writing
+    else
+      *pte &= ~PTE_W;   // set not writing, only reading
+  }
+
+  lcr3(V2P(myproc()->pgdir));
+  
+  return 0;
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
