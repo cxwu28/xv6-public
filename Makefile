@@ -184,8 +184,8 @@ UPROGS=\
 	_zombie\
 	_test_null\
 	_test_mprotect\
-	_test_munprotect.c\
-	_test_fork_inheritance.c\
+	_test_munprotect\
+	_test_fork_inheritance\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
