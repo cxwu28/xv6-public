@@ -627,9 +627,7 @@ int
 join(void **stack)
 {
   struct proc *p;
-  struct proc *pp;
   int havekids, pid;
-  int last;
   struct proc *curproc = myproc();
 
   acquire(&ptable.lock);
@@ -653,29 +651,13 @@ join(void **stack)
         kfree(p->kstack);
         p->kstack = 0;
 
-        /*
-         * if no one else shares this pgdir,
-         * free address space
-         */
-        last = 1;
-        for(pp = ptable.proc; pp < &ptable.proc[NPROC]; pp++){
-          if(pp != p &&
-             pp->state != UNUSED &&
-             pp->pgdir == p->pgdir){
-            last = 0;
-            break;
-          }
-        }
-
-        if(last)
-          freevm(p->pgdir);
-
-        p->state = UNUSED;
+        p->ustack = 0;
+        p->sz = 0;
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
-        p->ustack = 0;
+        p->state = UNUSED;
 
         release(&ptable.lock);
         return pid;
