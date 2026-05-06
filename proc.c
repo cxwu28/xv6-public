@@ -595,17 +595,14 @@ clone(void (*fcn)(void *, void *), void *arg1, void *arg2, void *stack)
 
   uint sp = (uint)stack;
 
-  // fake return address
-  sp -= 4;
-  *(uint*)sp = 0xffffffff;
-
-  // arg2
   sp -= 4;
   *(uint*)sp = (uint)arg2;
 
-  // arg1
   sp -= 4;
   *(uint*)sp = (uint)arg1;
+
+  sp -= 4;
+  *(uint*)sp = 0xffffffff;
 
   np->tf->esp = sp;
   np->tf->eip = (uint)fcn;
