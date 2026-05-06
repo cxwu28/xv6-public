@@ -271,14 +271,17 @@ exit(void)
    * If this is a process exiting, kill all threads
    * sharing same address space.
    */
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p != curproc &&
-       p->pgdir == curproc->pgdir &&
-       p->state != UNUSED &&
-       p->state != ZOMBIE){
-      p->killed = 1;
-      if(p->state == SLEEPING)
-        p->state = RUNNABLE;
+  if(curproc->parent == 0 ||
+    curproc->parent->pgdir != curproc->pgdir){
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p != curproc &&
+        p->pgdir == curproc->pgdir &&
+        p->state != UNUSED &&
+        p->state != ZOMBIE){
+        p->killed = 1;
+        if(p->state == SLEEPING)
+          p->state = RUNNABLE;
+      }
     }
   }
 
