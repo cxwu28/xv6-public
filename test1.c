@@ -3,7 +3,7 @@
 #include "user.h"
 
 void
-worker(void *a, void *b)
+worker(void *arg1, void *arg2)
 {
   printf(1, "thread running\n");
   exit();
@@ -12,7 +12,16 @@ worker(void *a, void *b)
 int
 main()
 {
-  thread_create(worker, 0, 0);
+  int pid;
+
+  pid = thread_create(worker, 0, 0);
+  if(pid < 0){
+    printf(1, "thread_create failed\n");
+    exit();
+  }
+
   thread_join();
+
+  printf(1, "test1 passed\n");
   exit();
 }
