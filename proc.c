@@ -261,6 +261,21 @@ exit(void)
     }
   }
 
+  /*
+   * If this is a process exiting, kill all threads
+   * sharing same address space.
+   */
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p != curproc &&
+       p->pgdir == curproc->pgdir &&
+       p->state != UNUSED &&
+       p->state != ZOMBIE){
+      p->killed = 1;
+      if(p->state == SLEEPING)
+        p->state = RUNNABLE;
+    }
+  }
+
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -273,9 +288,11 @@ int
 wait(void)
 {
   struct proc *p;
+  struct proc *pp;
   int havekids, pid;
+  int last;
   struct proc *curproc = myproc();
-  
+
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -283,13 +300,32 @@ wait(void)
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->parent != curproc)
         continue;
+      // only wait for real processes, not threads
+      if(p->pgdir == curproc->pgdir)
+        continue;
       havekids = 1;
       if(p->state == ZOMBIE){
-        // Found one.
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
-        freevm(p->pgdir);
+
+        /*
+         * free address space only if no one else
+         * shares this pgdir
+         */
+        last = 1;
+        for(pp = ptable.proc; pp < &ptable.proc[NPROC]; pp++){
+          if(pp != p &&
+             pp->state != UNUSED &&
+             pp->pgdir == p->pgdir){
+            last = 0;
+            break;
+          }
+        }
+
+        if(last)
+          freevm(p->pgdir);
+
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
@@ -306,8 +342,7 @@ wait(void)
       return -1;
     }
 
-    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
-    sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+    sleep(curproc, &ptable.lock);
   }
 }
 
@@ -530,5 +565,128 @@ procdump(void)
         cprintf(" %p", pc[i]);
     }
     cprintf("\n");
+  }
+}
+
+int
+clone(void (*fcn)(void *, void *), void *arg1, void *arg2, void *stack)
+{
+  int i, pid;
+  struct proc *np;
+  struct proc *curproc = myproc();
+
+  if((np = allocproc()) == 0)
+    return -1;
+
+  np->pgdir = curproc->pgdir;
+  np->sz = curproc->sz;
+  np->parent = curproc;
+
+  *np->tf = *curproc->tf;
+
+  uint sp = (uint)stack;
+
+  // fake return address
+  sp -= 4;
+  *(uint*)sp = 0xffffffff;
+
+  // arg2
+  sp -= 4;
+  *(uint*)sp = (uint)arg2;
+
+  // arg1
+  sp -= 4;
+  *(uint*)sp = (uint)arg1;
+
+  np->tf->esp = sp;
+  np->tf->eip = (uint)fcn;
+
+  // child sees return value 0
+  np->tf->eax = 0;
+
+  np->ustack = stack;
+
+  for(i = 0; i < NOFILE; i++){
+    if(curproc->ofile[i])
+      np->ofile[i] = filedup(curproc->ofile[i]);
+  }
+
+  np->cwd = idup(curproc->cwd);
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
+  pid = np->pid;
+
+  acquire(&ptable.lock);
+  np->state = RUNNABLE;
+  release(&ptable.lock);
+
+  return pid;
+}
+
+int
+join(void **stack)
+{
+  struct proc *p;
+  struct proc *pp;
+  int havekids, pid;
+  int last;
+  struct proc *curproc = myproc();
+
+  acquire(&ptable.lock);
+  for(;;){
+    havekids = 0;
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != curproc)
+        continue;
+
+      // only join threads
+      if(p->pgdir != curproc->pgdir)
+        continue;
+
+      havekids = 1;
+
+      if(p->state == ZOMBIE){
+        pid = p->pid;
+        *stack = p->ustack;
+
+        kfree(p->kstack);
+        p->kstack = 0;
+
+        /*
+         * if no one else shares this pgdir,
+         * free address space
+         */
+        last = 1;
+        for(pp = ptable.proc; pp < &ptable.proc[NPROC]; pp++){
+          if(pp != p &&
+             pp->state != UNUSED &&
+             pp->pgdir == p->pgdir){
+            last = 0;
+            break;
+          }
+        }
+
+        if(last)
+          freevm(p->pgdir);
+
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        p->ustack = 0;
+
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    if(!havekids || curproc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    sleep(curproc, &ptable.lock);
   }
 }
