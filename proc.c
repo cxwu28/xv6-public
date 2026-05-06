@@ -252,9 +252,15 @@ exit(void)
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
 
-  // Pass abandoned children to init.
+  // Pass abandoned process children to init.
+  // Threads (same pgdir) should NOT be reparented to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == curproc){
+
+      // skip threads
+      if(p->pgdir == curproc->pgdir)
+        continue;
+
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
